@@ -115,12 +115,20 @@ function CameraScreen({ navigation }) {
       if (status !== 'granted') {
         return;
       }
-      const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        quality: 0.8,
-        cameraType: cameraType,
-        allowsEditing: false,
-      });
+      let result;
+      try {
+        result = await ImagePicker.launchCameraAsync({
+          mediaTypes: ImagePicker.MediaType.Images,
+          quality: 0.8,
+          cameraType: cameraType,
+          allowsEditing: false,
+        });
+      } catch (err) {
+        console.log('launchCameraAsync error', err);
+        return;
+      }
+
+      console.log('camera result', result);
       if (!result.cancelled) {
         let uri = result.uri;
         if (cameraType === 'front') {
@@ -136,7 +144,9 @@ function CameraScreen({ navigation }) {
           }
         }
         setLatestPhoto(uri);
-        navigation.navigate('Home');
+        navigation.navigate('Main', { screen: 'Home' });
+      } else {
+        console.log('camera cancelled or not available');
       }
     };
 
