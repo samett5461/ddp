@@ -116,9 +116,9 @@ function CameraScreen({ navigation }) {
         return;
       }
       let result;
+      console.log('ImagePicker object', Object.keys(ImagePicker));
       try {
         result = await ImagePicker.launchCameraAsync({
-          mediaTypes: ImagePicker.MediaType.Images,
           quality: 0.8,
           cameraType: cameraType,
           allowsEditing: false,
@@ -129,8 +129,8 @@ function CameraScreen({ navigation }) {
       }
 
       console.log('camera result', result);
-      if (!result.cancelled) {
-        let uri = result.uri;
+      if (!result.canceled) {
+        let uri = result.assets && result.assets[0] && result.assets[0].uri;
         if (cameraType === 'front') {
           try {
             const manipulated = await ImageManipulator.manipulateAsync(
