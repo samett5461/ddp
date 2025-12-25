@@ -44,13 +44,13 @@ function Header({ navigation, title = 'DDP' }) {
 function HomeScreen({ navigation }) {
   const { latestPhoto } = React.useContext(PhotoContext);
   const [feedPhotos, setFeedPhotos] = React.useState([]);
+  const [randomPhoto, setRandomPhoto] = React.useState(null);
 
   React.useEffect(() => {
     const q = query(collection(db, 'photos'), orderBy('createdAt', 'desc'));
     const unsub = onSnapshot(q, (snapshot) => {
       const arr = snapshot.docs.map((d) => {
         const data = d.data();
-        // Base64'ü data URI formatına çevir
         if (data.base64) {
           const format = data.format || 'jpeg';
           data.url = `data:image/${format};base64,${data.base64}`;
@@ -58,7 +58,11 @@ function HomeScreen({ navigation }) {
         return { id: d.id, ...data };
       });
       setFeedPhotos(arr);
-    }, (err) => console.log('photos snapshot error', err));
+      if (arr.length > 0) {
+        const randomIndex = Math.floor(Math.random() * arr.length);
+        setRandomPhoto(arr[randomIndex]);
+      }
+    }, (err) => console.error('photos snapshot error', err));
     return unsub;
   }, []);
   return (
@@ -66,8 +70,8 @@ function HomeScreen({ navigation }) {
       <Header navigation={navigation} />
       <View style={styles.homeContent}>
         <View style={styles.photoArea}>
-          {feedPhotos && feedPhotos.length > 0 ? (
-            <Image source={{ uri: feedPhotos[0].url }} style={styles.photo} />
+          {randomPhoto ? (
+            <Image source={{ uri: randomPhoto.url }} style={styles.photo} />
           ) : latestPhoto ? (
             <Image source={{ uri: latestPhoto }} style={styles.photo} />
           ) : (
