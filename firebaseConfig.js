@@ -1,8 +1,8 @@
 import { initializeApp, getApps } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
+import { getAuth } from 'firebase/auth';
 
-// TODO: Replace the following config with your Firebase project's config
 const firebaseConfig = {
   apiKey: "AIzaSyBUVe1GiYCN1apQhm2Ye_nYREzHmzGWyjc",
   authDomain: "deleteddailypictures.firebaseapp.com",
@@ -12,6 +12,7 @@ const firebaseConfig = {
   appId: "1:236219279138:web:b17915d86eb4b5f192a77b",
   measurementId: "G-EXN9FM9ENX"
 };
+
 let app;
 const existingApps = getApps();
 if (existingApps.length === 0) {
@@ -20,7 +21,28 @@ if (existingApps.length === 0) {
   app = existingApps[0];
 }
 
-const db = getFirestore(app);
-const storage = getStorage(app);
+export const db = getFirestore(app);
+export const storage = getStorage(app);
 
-export { db, storage };
+// Auth'u lazy initialize et - Expo Go uyumluluğu için
+let authInstance = null;
+export const getAuthInstance = () => {
+  if (!authInstance) {
+    try {
+      // App'in initialize edildiğinden emin ol
+      if (!app) {
+        console.warn('Firebase app not initialized');
+        return null;
+      }
+      authInstance = getAuth(app);
+    } catch (error) {
+      console.error('Auth initialization error:', error);
+      // Expo Go'da auth çalışmayabilir, null döndür
+      return null;
+    }
+  }
+  return authInstance;
+};
+
+// Export etme - sadece getAuthInstance kullan
+export { app };

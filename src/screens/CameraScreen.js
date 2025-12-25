@@ -7,10 +7,12 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { PhotoContext } from '../context/PhotoContext';
+import { AuthContext } from '../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function CameraScreen({ navigation }) {
   const { setLatestPhoto } = React.useContext(PhotoContext);
+  const { user } = React.useContext(AuthContext);
   const [cameraType, setCameraType] = useState('back');
 
   useEffect(() => {
@@ -49,7 +51,8 @@ export default function CameraScreen({ navigation }) {
           await addDoc(collection(db, 'photos'), {
             base64: base64,
             createdAt: serverTimestamp(),
-            format: 'jpeg'
+            format: 'jpeg',
+            userId: user?.uid || null
           });
           
           // Base64 data URI formatında göster

@@ -19,6 +19,8 @@ import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import { db } from './firebaseConfig';
 import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { AuthProvider, AuthContext } from './src/context/AuthContext';
+import AuthScreen from './src/screens/AuthScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -134,7 +136,8 @@ function SettingsScreen({ navigation }) {
 
 function CameraScreen({ navigation }) {
   const { setLatestPhoto } = React.useContext(PhotoContext);
-  const [cameraType, setCameraType] = useState('back'); // 'front' | 'back'
+  const { user } = React.useContext(AuthContext);
+  const [cameraType, setCameraType] = useState('back');
 
   useEffect(() => {
     const openCamera = async () => {
@@ -186,7 +189,8 @@ function CameraScreen({ navigation }) {
           await addDoc(collection(db, 'photos'), {
             base64: base64,
             createdAt: serverTimestamp(),
-            format: 'jpeg'
+            format: 'jpeg',
+            userId: user?.uid || null
           });
           
           // Base64 data URI formatında göster
@@ -245,8 +249,17 @@ function Tabs() {
   );
 }
 
-export default function App() {
+function MainApp() {
+  const { user, loading } = React.useContext(AuthContext);
   const [latestPhoto, setLatestPhoto] = useState(null);
+
+  if (loading) {
+    return null;
+  }
+
+  if (!user) {
+    return <AuthScreen />;
+  }
 
   return (
     <PhotoContext.Provider value={{ latestPhoto, setLatestPhoto }}>
@@ -258,6 +271,14 @@ export default function App() {
       </NavigationContainer>
       <StatusBar style="auto" />
     </PhotoContext.Provider>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <MainApp />
+    </AuthProvider>
   );
 }
 
