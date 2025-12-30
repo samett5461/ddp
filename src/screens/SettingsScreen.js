@@ -1,22 +1,11 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import Header from '../components/Header';
 import { AuthContext } from '../context/AuthContext';
+import { safeAlert } from '../utils/alert';
 
 export default function SettingsScreen({ navigation }) {
   const { logout, user } = React.useContext(AuthContext);
-
-  const safeAlert = (title, message, buttons, options) => {
-    try {
-      if (typeof Alert !== 'undefined' && Alert && typeof Alert.alert === 'function') {
-        Alert.alert(title, message, buttons, options);
-      } else {
-        console.log('Alert fallback:', title, message);
-      }
-    } catch (e) {
-      console.warn('safeAlert error', e);
-    }
-  };
 
   const confirmLogout = () => {
     safeAlert(

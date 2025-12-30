@@ -1,23 +1,12 @@
 import React, { useContext } from 'react';
-import { View, Text, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { AuthContext } from '../context/AuthContext';
+import { safeAlert } from '../utils/alert';
 
 export default function Header({ navigation, title = 'DDP' }) {
   const { logout } = useContext(AuthContext);
-
-  const safeAlert = (title, message, buttons, options) => {
-    try {
-      if (typeof Alert !== 'undefined' && Alert && typeof Alert.alert === 'function') {
-        Alert.alert(title, message, buttons, options);
-      } else {
-        console.log('Alert fallback:', title, message);
-      }
-    } catch (e) {
-      console.warn('safeAlert error', e);
-    }
-  };
 
   const confirmLogout = () => {
     safeAlert(

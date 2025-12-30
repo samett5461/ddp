@@ -49,29 +49,24 @@ export function AuthProvider({ children }) {
     let unsubscribe = null;
     
     const checkAuthStatus = async () => {
-      console.log('AuthContext: checkAuthStatus start', { memoryAuthToken, authAvailable });
       try {
         // Firebase auth'u kontrol et
         try {
           const authInstance = getAuthInstance();
-          console.log('AuthContext: got authInstance', !!authInstance);
           if (authInstance) {
             setAuthAvailable(true);
             unsubscribe = onAuthStateChanged(authInstance, async (firebaseUser) => {
-              console.log('AuthContext: onAuthStateChanged callback', !!firebaseUser);
               if (mounted) {
                 if (firebaseUser) {
                   try {
                     const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
                     const profile = userDoc.exists() ? userDoc.data() : null;
-                    console.log('AuthContext: loaded profile', !!profile);
                     setUser({ ...firebaseUser, profile });
                   } catch (err) {
                     console.error('Failed to load user profile:', err);
                     setUser(firebaseUser);
                   }
                 } else {
-                  console.log('AuthContext: firebaseUser is null, clearing user');
                   setUser(null);
                 }
                 setLoading(false);
@@ -80,9 +75,6 @@ export function AuthProvider({ children }) {
           } else if (memoryAuthToken) {
             // REST fallback: we have a token from previous REST sign-in/register
             try {
-              console.log('AuthContext: using REST fallback token');
-              // We don't have firebaseUser; but if we stored localId previously, try to load profile
-              // For now, attempt to read a 'current_rest_user' from memory storage if available
               const restUser = await Storage.getItem('@ddp_rest_user');
               if (restUser) {
                 const parsed = JSON.parse(restUser);
@@ -143,7 +135,6 @@ export function AuthProvider({ children }) {
       }
       await signInAnonymously(authInstance);
     } catch (error) {
-      console.error('Anonymous login error:', error);
       throw error;
     }
   };
@@ -159,7 +150,6 @@ export function AuthProvider({ children }) {
           const profile = userDoc.exists() ? userDoc.data() : null;
           return { user: userCredential.user, profile };
         } catch (err) {
-          console.error('Failed to fetch user profile after login:', err);
           return { user: userCredential.user, profile: null };
         }
       }
@@ -194,13 +184,11 @@ export function AuthProvider({ children }) {
         setAuthAvailable(true);
         return { user: pseudoUser, profile };
       } catch (err) {
-        console.error('Failed to fetch user profile after REST login:', err);
         setUser({ uid: data.localId, email: data.email });
         setAuthAvailable(true);
         return { user: { uid: data.localId, email: data.email }, profile: null };
       }
     } catch (error) {
-      console.error('Email login error:', error);
       const msg = (error && (error.code || error.message)) ? (error.code || error.message) : null;
       if (msg && String(msg).toLowerCase().includes('configuration')) {
         throw new Error('Email/Password authentication is not enabled for this Firebase project. Enable it in Firebase Console → Authentication → Sign-in method.');
@@ -236,9 +224,7 @@ export function AuthProvider({ children }) {
         if (username) {
           try {
             await updateProfile(userCredential.user, { displayName: username });
-          } catch (e) {
-            console.warn('Failed to set displayName in Auth:', e);
-          }
+          } catch (e) {}
         }
 
         // Return both auth user and profile
@@ -277,8 +263,6 @@ export function AuthProvider({ children }) {
 
       return { user: { uid, email }, profile: userProfile };
     } catch (error) {
-      console.error('Email register error:', error);
-      // Detect Firebase configuration-not-found and provide a helpful message
       const msg = (error && (error.code || error.message)) ? (error.code || error.message) : null;
       if (msg && String(msg).toLowerCase().includes('configuration')) {
         throw new Error('Email/Password authentication is not enabled for this Firebase project. Enable it in Firebase Console → Authentication → Sign-in method.');
@@ -298,7 +282,6 @@ export function AuthProvider({ children }) {
       }
       setUser(null);
     } catch (error) {
-      console.error('Logout error:', error);
       setUser(null);
     }
   };

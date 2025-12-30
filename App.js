@@ -1,5 +1,4 @@
-import React, { useState, useEffect, createContext, useContext } from 'react';
-import { Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -13,72 +12,20 @@ import {
   FlatList,
   Dimensions,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import { db } from './firebaseConfig';
 import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { AuthProvider, AuthContext } from './src/context/AuthContext';
+import { PhotoContext } from './src/context/PhotoContext';
 import AuthScreen from './src/screens/AuthScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
+import Header from './src/components/Header';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
-export const PhotoContext = createContext();
-
-function Header({ navigation, title = 'DDP' }) {
-  const { logout } = React.useContext(AuthContext);
-
-  const safeAlert = (title, message, buttons, options) => {
-    try {
-      if (typeof Alert !== 'undefined' && Alert && typeof Alert.alert === 'function') {
-        Alert.alert(title, message, buttons, options);
-      } else {
-        console.log('Alert fallback:', title, message);
-      }
-    } catch (e) {
-      console.warn('safeAlert error', e);
-    }
-  };
-
-  const confirmLogout = () => {
-    safeAlert(
-      'Çıkış Yap',
-      'Hesabınızdan çıkmak istediğinize emin misiniz?',
-      [
-        { text: 'İptal', style: 'cancel' },
-        { text: 'Çıkış Yap', style: 'destructive', onPress: handleLogout },
-      ],
-      { cancelable: true }
-    );
-  };
-
-  const handleLogout = async () => {
-    try {
-      await logout();
-    } catch (e) {
-      console.error('Logout failed:', e);
-      safeAlert('Hata', 'Çıkış yapılırken bir hata oluştu.');
-    }
-  };
-
-  return (
-    <SafeAreaView style={styles.header}>
-      <View style={styles.headerInner}>
-        <View style={{ width: 40 }} />
-        <Text style={styles.headerTitle}>{title}</Text>
-        <TouchableOpacity
-          style={{ width: 40, alignItems: 'flex-end' }}
-          onPress={confirmLogout}
-        >
-          <Ionicons name="log-out-outline" size={24} color="#ff4da6" />
-        </TouchableOpacity>
-      </View>
-    </SafeAreaView>
-  );
-}
 
 function HomeScreen({ navigation }) {
   const { latestPhoto } = React.useContext(PhotoContext);
@@ -126,17 +73,8 @@ function HomeScreen({ navigation }) {
 }
 
 function ProfileScreen({ navigation }) {
-  // Simple profile with logout
   const samplePhotos = Array.from({ length: 9 }).map((_, i) => ({ id: i, uri: null }));
-  const { user, logout } = React.useContext(AuthContext);
-
-  const handleLogout = async () => {
-    try {
-      await logout();
-    } catch (e) {
-      console.error('Profile logout failed', e);
-    }
-  };
+  const { user } = React.useContext(AuthContext);
 
   const displayName = user?.profile?.username || user?.displayName || 'ddp_user';
 
@@ -156,8 +94,6 @@ function ProfileScreen({ navigation }) {
           </View>
         </View>
       </View>
-
-      {/* removed duplicate logout button from Profile — use Settings header menu instead */}
 
       <FlatList
         data={samplePhotos}

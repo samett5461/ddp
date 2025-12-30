@@ -26,9 +26,8 @@ export const storage = getStorage(app);
 if (Platform.OS !== 'web') {
   try {
     initializeAuth(app, { persistence: getReactNativePersistence(AsyncStorage) });
-    console.log('firebaseConfig: initializeAuth called at module load');
   } catch (e) {
-    console.warn('firebaseConfig: initializeAuth at module load failed (will try lazily)', e && e.message ? e.message : e);
+    // Silent fail - will try lazy init
   }
 }
 
@@ -58,10 +57,8 @@ export const getAuthInstance = () => {
             initializeAuth(app, { persistence: getReactNativePersistence(AsyncStorage) });
           } catch (initErr) {
             // Ignore auth/already-initialized (expected if another init raced in)
-            if (initErr && initErr.code === 'auth/already-initialized') {
-              // No-op
-            } else {
-              console.warn('firebaseConfig: initializeAuth lazy threw', initErr && initErr.message ? initErr.message : initErr);
+            if (initErr && initErr.code !== 'auth/already-initialized') {
+              console.error('Auth init error:', initErr.message);
             }
           }
 
@@ -70,12 +67,10 @@ export const getAuthInstance = () => {
             authInstance = retry;
             return authInstance;
           } catch (finalErr) {
-            console.error('firebaseConfig: getAuth after initializeAuth failed', finalErr && finalErr.message ? finalErr.message : finalErr);
             return null;
           }
         }
 
-        console.warn('firebaseConfig: getAuth threw unexpected error', getErr && getErr.message ? getErr.message : getErr);
         return null;
       }
     } catch (err) {
