@@ -1,33 +1,63 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView } from 'react-native';
 import Header from '../components/Header';
 import { AuthContext } from '../context/AuthContext';
 
 export default function SettingsScreen({ navigation }) {
   const { logout, user } = React.useContext(AuthContext);
 
+  const safeAlert = (title, message, buttons, options) => {
+    try {
+      if (typeof Alert !== 'undefined' && Alert && typeof Alert.alert === 'function') {
+        Alert.alert(title, message, buttons, options);
+      } else {
+        console.log('Alert fallback:', title, message);
+      }
+    } catch (e) {
+      console.warn('safeAlert error', e);
+    }
+  };
+
+  const confirmLogout = () => {
+    safeAlert(
+      'Çıkış Yap',
+      'Hesabınızdan çıkmak istediğinize emin misiniz?',
+      [
+        { text: 'İptal', style: 'cancel' },
+        { text: 'Çıkış Yap', style: 'destructive', onPress: handleLogout },
+      ],
+      { cancelable: true }
+    );
+  };
+
   const handleLogout = async () => {
     try {
       await logout();
     } catch (error) {
       console.error('Logout failed:', error);
+      safeAlert('Hata', 'Çıkış yapılırken bir hata oluştu.');
     }
   };
 
   return (
     <View style={styles.container}>
       <Header navigation={navigation} title="Ayarlar" />
-      <View style={styles.content}>
+      <ScrollView contentContainerStyle={styles.content}>
+        <View style={styles.sectionTop}>
+          <Text style={styles.sectionTitle}>Hesap</Text>
+          <Text style={styles.sectionDesc}>Hesabınızla ilgili ayarlar ve çıkış işlemi</Text>
+          <TouchableOpacity style={[styles.logoutButton, { marginTop: 12 }]} onPress={confirmLogout}>
+            <Text style={styles.logoutButtonText}>Çıkış Yap</Text>
+          </TouchableOpacity>
+        </View>
+
         {user && (
           <View style={styles.section}>
             <Text style={styles.label}>Kullanıcı ID</Text>
             <Text style={styles.value}>{user.uid}</Text>
           </View>
         )}
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Text style={styles.logoutButtonText}>Çıkış Yap</Text>
-        </TouchableOpacity>
-      </View>
+      </ScrollView>
     </View>
   );
 }
