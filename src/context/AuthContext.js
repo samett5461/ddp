@@ -286,6 +286,23 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const refreshUser = async () => {
+    try {
+      const authInstance = getAuthInstance();
+      if (authInstance && authInstance.currentUser) {
+        const currentUser = authInstance.currentUser;
+        await currentUser.reload();
+        
+        // Firestore'dan güncel profili çek
+        const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+        const profile = userDoc.exists() ? userDoc.data() : null;
+        setUser({ ...currentUser, profile });
+      }
+    } catch (error) {
+      console.error('Failed to refresh user:', error);
+    }
+  };
+
   return (
     <AuthContext.Provider value={{ 
       user, 
@@ -293,7 +310,8 @@ export function AuthProvider({ children }) {
       loginAnonymously, 
       loginWithEmail,
       registerWithEmail,
-      logout 
+      logout,
+      refreshUser
     }}>
       {children}
     </AuthContext.Provider>

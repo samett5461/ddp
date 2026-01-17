@@ -7,6 +7,14 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Fotoğraf çekmek için kameraya erişim gerekiyor"
+        }
+      ]
+    ],
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -14,14 +22,23 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.mvlt.ddp"
+      "bundleIdentifier": "com.mvlt.ddp",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Fotoğraf çekmek için kameraya erişim gerekiyor",
+        "NSPhotoLibraryUsageDescription": "Fotoğraf seçmek için galeriye erişim gerekiyor"
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"

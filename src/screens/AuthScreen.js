@@ -2,11 +2,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet, TextInput, Animated, Image, Easing, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AuthContext } from '../context/AuthContext';
+import { ThemeContext } from '../context/ThemeContext';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export default function AuthScreen() {
   const { loginAnonymously, loginWithEmail, registerWithEmail } = React.useContext(AuthContext);
+  const { theme } = React.useContext(ThemeContext);
   const [loading, setLoading] = useState(false);
   const [formType, setFormType] = useState(null); // 'login' veya 'register'
   const [username, setUsername] = useState('');
@@ -18,6 +20,12 @@ export default function AuthScreen() {
   const [parolaTekrar, setParolaTekrar] = useState('');
   const [sozlesmeKabul, setSozlesmeKabul] = useState(false);
   const [buttonPosition] = useState(new Animated.Value(0));
+  
+  // Şifre görünürlüğü state'leri
+  const [showPassword, setShowPassword] = useState(false);
+  const [showParola, setShowParola] = useState(false);
+  const [showParolaTekrar, setShowParolaTekrar] = useState(false);
+  
   const [buttonOpacity] = useState(new Animated.Value(1));
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [imageOpacity1] = useState(new Animated.Value(1));
@@ -323,14 +331,26 @@ export default function AuthScreen() {
                 autoCapitalize="none"
                 keyboardType="email-address"
               />
-              <TextInput
-                style={styles.input}
-                placeholder="Parola"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                autoCapitalize="none"
-              />
+              <View style={styles.passwordContainer}>
+                <TextInput
+                  style={styles.passwordInput}
+                  placeholder="Parola"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                />
+                <TouchableOpacity 
+                  style={styles.eyeIcon}
+                  onPress={() => setShowPassword(!showPassword)}
+                >
+                  <Ionicons 
+                    name={showPassword ? "eye-off" : "eye"} 
+                    size={24} 
+                    color="#ff4da6" 
+                  />
+                </TouchableOpacity>
+              </View>
               <TouchableOpacity
                 style={styles.formButton}
                 onPress={handleLogin}
@@ -390,22 +410,46 @@ export default function AuthScreen() {
                 autoCapitalize="none"
                 keyboardType="email-address"
               />
-              <TextInput
-                style={styles.input}
-                placeholder="Parola"
-                value={parola}
-                onChangeText={setParola}
-                secureTextEntry
-                autoCapitalize="none"
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Parola Tekrar"
-                value={parolaTekrar}
-                onChangeText={setParolaTekrar}
-                secureTextEntry
-                autoCapitalize="none"
-              />
+              <View style={styles.passwordContainer}>
+                <TextInput
+                  style={styles.passwordInput}
+                  placeholder="Parola"
+                  value={parola}
+                  onChangeText={setParola}
+                  secureTextEntry={!showParola}
+                  autoCapitalize="none"
+                />
+                <TouchableOpacity 
+                  style={styles.eyeIcon}
+                  onPress={() => setShowParola(!showParola)}
+                >
+                  <Ionicons 
+                    name={showParola ? "eye-off" : "eye"} 
+                    size={24} 
+                    color="#ff4da6" 
+                  />
+                </TouchableOpacity>
+              </View>
+              <View style={styles.passwordContainer}>
+                <TextInput
+                  style={styles.passwordInput}
+                  placeholder="Parola Tekrar"
+                  value={parolaTekrar}
+                  onChangeText={setParolaTekrar}
+                  secureTextEntry={!showParolaTekrar}
+                  autoCapitalize="none"
+                />
+                <TouchableOpacity 
+                  style={styles.eyeIcon}
+                  onPress={() => setShowParolaTekrar(!showParolaTekrar)}
+                >
+                  <Ionicons 
+                    name={showParolaTekrar ? "eye-off" : "eye"} 
+                    size={24} 
+                    color="#ff4da6" 
+                  />
+                </TouchableOpacity>
+              </View>
               <TouchableOpacity
                 style={styles.checkboxContainer}
                 onPress={() => setSozlesmeKabul(!sozlesmeKabul)}
@@ -468,7 +512,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 48,
-    fontWeight: 'bold',
+    fontWeight: '700',
     color: '#ff4da6',
     textShadowColor: 'rgba(0, 0, 0, 0.3)',
     textShadowOffset: { width: 0, height: 2 },
@@ -570,6 +614,33 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 16,
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
+  },
+  passwordContainer: {
+    width: '100%',
+    maxWidth: 300,
+    minWidth: 280,
+    marginBottom: 16,
+    position: 'relative',
+  },
+  passwordInput: {
+    width: '100%',
+    borderWidth: 1,
+    borderColor: '#ffe6f0',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    paddingRight: 50,
+    fontSize: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+  },
+  eyeIcon: {
+    position: 'absolute',
+    right: 12,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
   },
   checkboxContainer: {
     flexDirection: 'row',

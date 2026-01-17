@@ -1,237 +1,159 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
-import {
-  StyleSheet,
-  Text,
-  View,
-  TouchableOpacity,
-  Image,
-  FlatList,
-  Dimensions,
-} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import * as ImageManipulator from 'expo-image-manipulator';
-import * as ImagePicker from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system/legacy';
-import { db } from './firebaseConfig';
-import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { AuthProvider, AuthContext } from './src/context/AuthContext';
 import { PhotoContext } from './src/context/PhotoContext';
+import { ThemeProvider, ThemeContext } from './src/context/ThemeContext';
+import { db } from './firebaseConfig';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import AuthScreen from './src/screens/AuthScreen';
+import HomeScreen from './src/screens/HomeScreen';
+import CameraScreen from './src/screens/CameraScreen';
+import ProfileScreen from './src/screens/ProfileScreen';
+import UserProfileScreen from './src/screens/UserProfileScreen';
+import PhotoDetailScreen from './src/screens/PhotoDetailScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
-import Header from './src/components/Header';
+import NotificationScreen from './src/screens/NotificationScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
 
-function HomeScreen({ navigation }) {
-  const { latestPhoto } = React.useContext(PhotoContext);
-  const [feedPhotos, setFeedPhotos] = React.useState([]);
-  const [randomPhoto, setRandomPhoto] = React.useState(null);
-
-  React.useEffect(() => {
-    const q = query(collection(db, 'photos'), orderBy('createdAt', 'desc'));
-    const unsub = onSnapshot(q, (snapshot) => {
-      const arr = snapshot.docs.map((d) => {
-        const data = d.data();
-        if (data.base64) {
-          const format = data.format || 'jpeg';
-          data.url = `data:image/${format};base64,${data.base64}`;
-        }
-        return { id: d.id, ...data };
-      });
-      setFeedPhotos(arr);
-      if (arr.length > 0) {
-        const randomIndex = Math.floor(Math.random() * arr.length);
-        setRandomPhoto(arr[randomIndex]);
-      }
-    }, (err) => console.error('photos snapshot error', err));
-    return unsub;
-  }, []);
+// Home tab için stack navigator
+function HomeStack() {
   return (
-    <View style={styles.container}>
-      <Header navigation={navigation} />
-      <View style={styles.homeContent}>
-        <View style={styles.photoArea}>
-          {randomPhoto ? (
-            <Image source={{ uri: randomPhoto.url }} style={styles.photo} />
-          ) : latestPhoto ? (
-            <Image source={{ uri: latestPhoto }} style={styles.photo} />
-          ) : (
-            <View style={styles.placeholder}>
-              <Ionicons name="image-outline" size={48} color="#ff9fcf" />
-              <Text style={styles.placeholderText}>Henüz fotoğraf yok</Text>
-            </View>
-          )}
-        </View>
-      </View>
-    </View>
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="HomeFeed" component={HomeScreen} />
+      <Stack.Screen name="UserProfile" component={UserProfileScreen} />
+      <Stack.Screen name="PhotoDetail" component={PhotoDetailScreen} />
+    </Stack.Navigator>
   );
 }
 
-function ProfileScreen({ navigation }) {
-  const samplePhotos = Array.from({ length: 9 }).map((_, i) => ({ id: i, uri: null }));
-  const { user } = React.useContext(AuthContext);
-
-  const displayName = user?.profile?.username || user?.displayName || 'ddp_user';
-
+// Profile tab için stack navigator
+function ProfileStack() {
   return (
-    <View style={styles.container}>
-      <Header navigation={navigation} title="DDP" />
-      <View style={styles.profileTop}>
-        <View style={styles.profileAvatar}>
-          <Text style={{ color: '#fff', fontWeight: '700' }}>{(displayName || 'D').slice(0,2).toUpperCase()}</Text>
-        </View>
-        <View style={styles.profileInfo}>
-          <Text style={styles.profileName}>{displayName}</Text>
-          <View style={styles.statsRow}>
-            <View style={styles.stat}><Text style={styles.statNum}>12</Text><Text>Gönderi</Text></View>
-            <View style={styles.stat}><Text style={styles.statNum}>340</Text><Text>Takipçi</Text></View>
-            <View style={styles.stat}><Text style={styles.statNum}>180</Text><Text>Takip</Text></View>
-          </View>
-        </View>
-      </View>
-
-      <FlatList
-        data={samplePhotos}
-        keyExtractor={(item) => String(item.id)}
-        numColumns={3}
-        columnWrapperStyle={{ justifyContent: 'space-between' }}
-        contentContainerStyle={{ padding: 8 }}
-        renderItem={({ item }) => (
-          <View style={styles.gridItem}>
-            <View style={styles.gridPlaceholder} />
-          </View>
-        )}
-      />
-    </View>
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="ProfileMain" component={ProfileScreen} />
+      <Stack.Screen name="UserProfile" component={UserProfileScreen} />
+      <Stack.Screen name="PhotoDetail" component={PhotoDetailScreen} />
+    </Stack.Navigator>
   );
 }
 
-
-
-function CameraScreen({ navigation }) {
-  const { setLatestPhoto } = React.useContext(PhotoContext);
-  const { user } = React.useContext(AuthContext);
-  const [cameraType, setCameraType] = useState('back');
-
-  useEffect(() => {
-    const openCamera = async () => {
-      const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      if (status !== 'granted') {
-        return;
-      }
-      let result;
-      try {
-        result = await ImagePicker.launchCameraAsync({
-          quality: 0.8,
-          cameraType: cameraType,
-          allowsEditing: false,
-        });
-      } catch (err) {
-        return;
-      }
-      if (!result.canceled) {
-        let uri = result.assets && result.assets[0] && result.assets[0].uri;
-        if (cameraType === 'front') {
-          try {
-            const manipulated = await ImageManipulator.manipulateAsync(
-              uri,
-              [{ flip: ImageManipulator.FlipType.Horizontal }],
-              { compress: 1, format: ImageManipulator.SaveFormat.JPEG }
-            );
-            uri = manipulated.uri;
-          } catch (e) {
-            // ignore
-          }
-        }
-        // show local image immediately
-        setLatestPhoto(uri);
-        // Base64'e çevir ve Firestore'a kaydet
-        try {
-          // Resize ve compress et (Firestore 1MB limit için)
-          const resized = await ImageManipulator.manipulateAsync(
-            uri,
-            [{ resize: { width: 800 } }], // Genişliği 800px'e düşür
-            { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
-          );
-          
-          // Base64'e çevir
-          const base64 = await FileSystem.readAsStringAsync(resized.uri, {
-            encoding: 'base64',
-          });
-          
-          // Firestore'a kaydet
-          await addDoc(collection(db, 'photos'), {
-            base64: base64,
-            createdAt: serverTimestamp(),
-            format: 'jpeg',
-            userId: user?.uid || null
-          });
-          
-          // Base64 data URI formatında göster
-          const base64Uri = `data:image/jpeg;base64,${base64}`;
-          setLatestPhoto(base64Uri);
-        } catch (e) {
-          console.error('upload to firebase error', e);
-        }
-
-        navigation.navigate('Main', { screen: 'Home' });
-      }
-    };
-
-    // open camera when this screen is focused
-    const unsub = navigation.addListener('focus', () => {
-      openCamera();
-    });
-    return unsub;
-  }, [cameraType, navigation, setLatestPhoto]);
-
+// Notification tab için stack navigator
+function NotificationStack() {
   return (
-    <View style={[styles.container, { alignItems: 'center', justifyContent: 'center' }]}>
-      <Header navigation={navigation} title="Kamera" />
-      <View style={{ padding: 20 }}>
-        <TouchableOpacity
-          style={[styles.flipButton, { marginBottom: 16 }]}
-          onPress={() => setCameraType((t) => (t === 'back' ? 'front' : 'back'))}
-        >
-          <Ionicons name="camera-reverse-outline" size={28} color="#fff" />
-        </TouchableOpacity>
-        <Text style={{ textAlign: 'center', color: '#666' }}>Kamera açılacak...</Text>
-      </View>
-    </View>
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="NotificationFeed" component={NotificationScreen} />
+      <Stack.Screen name="UserProfile" component={UserProfileScreen} />
+      <Stack.Screen name="PhotoDetail" component={PhotoDetailScreen} />
+    </Stack.Navigator>
   );
 }
 
 function Tabs() {
+  const { theme } = React.useContext(ThemeContext);
+  const { user } = React.useContext(AuthContext);
+  const [unreadCount, setUnreadCount] = React.useState(0);
+
+  // Okunmamış bildirim sayısını dinle
+  React.useEffect(() => {
+    if (!user?.uid) return;
+
+    const q = query(
+      collection(db, 'notifications'),
+      where('recipientId', '==', user.uid),
+      where('read', '==', false)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setUnreadCount(snapshot.size);
+    }, (error) => {
+      console.log('Bildirim sayısı dinleme hatası:', error);
+    });
+
+    return () => unsubscribe();
+  }, [user?.uid]);
+  
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarActiveTintColor: '#ff4da6',
-        tabBarStyle: { backgroundColor: '#fff' },
-        tabBarIcon: ({ color, size }) => {
-          if (route.name === 'Home') return <Ionicons name="home-outline" size={size} color={color} />;
-          if (route.name === 'Camera') return <Ionicons name="camera-outline" size={size} color={color} />;
-          if (route.name === 'Profile') return <Ionicons name="person-outline" size={size} color={color} />;
-          if (route.name === 'Settings') return <Ionicons name="settings-outline" size={size} color={color} />;
-          return null;
+        tabBarActiveTintColor: theme.tabBarActive,
+        tabBarInactiveTintColor: theme.tabBarInactive,
+        tabBarShowLabel: false,
+        tabBarStyle: { 
+          backgroundColor: theme.tabBar,
+          borderTopWidth: 1,
+          borderTopColor: theme.tabBarBorder,
+          height: 70,
+          paddingBottom: 15,
+          paddingTop: 8,
+          elevation: 8,
+          shadowColor: theme.shadow,
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 3,
+        },
+        tabBarIcon: ({ color, size, focused }) => {
+          let iconName;
+          const iconSize = 28;
+          
+          if (route.name === 'Home') {
+            iconName = focused ? 'dice' : 'dice-outline';
+          } else if (route.name === 'Camera') {
+            iconName = focused ? 'camera' : 'camera-outline';
+          } else if (route.name === 'Notifications') {
+            iconName = focused ? 'notifications' : 'notifications-outline';
+          } else if (route.name === 'Profile') {
+            iconName = focused ? 'person' : 'person-outline';
+          } else if (route.name === 'Settings') {
+            iconName = focused ? 'settings' : 'settings-outline';
+          }
+          
+          // Kamera özel tasarım - Kabarık yuvarlak
+          if (route.name === 'Camera') {
+            return (
+              <View style={[styles.cameraButton, { backgroundColor: theme.button }]}>
+                <Ionicons name={iconName} size={30} color="#FFF" />
+              </View>
+            );
+          }
+          
+          // Bildirim badge'i
+          if (route.name === 'Notifications' && unreadCount > 0) {
+            return (
+              <View style={{ width: iconSize, height: iconSize }}>
+                <Ionicons name={iconName} size={iconSize} color={color} />
+                <View style={[styles.badge, { backgroundColor: '#ff4da6' }]}>
+                  <Text style={styles.badgeText}>
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </Text>
+                </View>
+              </View>
+            );
+          }
+          
+          return <Ionicons name={iconName} size={iconSize} color={color} />;
         },
       })}
     >
-      <Tab.Screen name="Home" component={HomeScreen} />
-      <Tab.Screen name="Camera" component={CameraScreen} />
-      <Tab.Screen name="Profile" component={ProfileScreen} />
-      <Tab.Screen name="Settings" component={SettingsScreen} />
+      <Tab.Screen name="Home" component={HomeStack} options={{ tabBarLabel: 'Ana Sayfa' }} />
+      <Tab.Screen name="Notifications" component={NotificationStack} options={{ tabBarLabel: 'Bildirimler' }} />
+      <Tab.Screen name="Camera" component={CameraScreen} options={{ tabBarLabel: 'Kamera' }} />
+      <Tab.Screen name="Profile" component={ProfileStack} options={{ tabBarLabel: 'Profil' }} />
+      <Tab.Screen name="Settings" component={SettingsScreen} options={{ tabBarLabel: 'Ayarlar' }} />
     </Tab.Navigator>
   );
 }
 
 function MainApp() {
   const { user, loading } = React.useContext(AuthContext);
+  const { isDark, theme } = React.useContext(ThemeContext);
   const [latestPhoto, setLatestPhoto] = useState(null);
 
   if (loading) {
@@ -243,53 +165,65 @@ function MainApp() {
     return (
       <PhotoContext.Provider value={{ latestPhoto, setLatestPhoto }}>
         <AuthScreen />
-        <StatusBar style="auto" />
+        <StatusBar style={isDark ? "light" : "dark"} />
       </PhotoContext.Provider>
     );
   }
 
   return (
     <PhotoContext.Provider value={{ latestPhoto, setLatestPhoto }}>
-      <NavigationContainer>
+      <NavigationContainer theme={{
+        colors: {
+          background: theme.background,
+        }
+      }}>
         <Stack.Navigator screenOptions={{ headerShown: false }}>
           <Stack.Screen name="Main" component={Tabs} />
         </Stack.Navigator>
       </NavigationContainer>
-      <StatusBar style="auto" />
+      <StatusBar style={isDark ? "light" : "dark"} />
     </PhotoContext.Provider>
   );
 }
 
 export default function App() {
   return (
-    <AuthProvider>
-      <MainApp />
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <MainApp />
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  header: { backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#ffe6f0' },
-  headerInner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 12 },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: '#ff4da6' },
-  homeContent: { flex: 1, padding: 16 },
-  photoArea: { flex: 1, borderRadius: 12, overflow: 'hidden', backgroundColor: '#fff', borderWidth: 1, borderColor: '#ffe6f0', alignItems: 'center', justifyContent: 'center' },
-  placeholder: { alignItems: 'center' },
-  placeholderText: { color: '#ff9fcf', marginTop: 8 },
-  photo: { width: '100%', height: '100%', resizeMode: 'cover' },
-  cameraContainer: { flex: 1, backgroundColor: '#000' },
-  camera: { flex: 1 },
-  cameraControls: { position: 'absolute', bottom: 40, left: 0, right: 0, flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center' },
-  captureButton: { width: 70, height: 70, borderRadius: 35, backgroundColor: '#fff' },
-  flipButton: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#ff4da6', alignItems: 'center', justifyContent: 'center' },
-  profileTop: { flexDirection: 'row', padding: 16, alignItems: 'center' },
-  profileAvatar: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#ffddee' },
-  profileInfo: { marginLeft: 16, flex: 1 },
-  profileName: { fontWeight: '700', fontSize: 18 },
-  statsRow: { flexDirection: 'row', marginTop: 8 },
-  stat: { marginRight: 12, alignItems: 'center' },
-  statNum: { fontWeight: '700' },
-  gridItem: { width: (Dimensions.get('window').width - 48) / 3, height: (Dimensions.get('window').width - 48) / 3, marginBottom: 8 },
-  gridPlaceholder: { flex: 1, backgroundColor: '#fff0f6', borderWidth: 1, borderColor: '#ffe6f0' },
+  cameraButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  badge: {
+    position: 'absolute',
+    right: -6,
+    top: -4,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  badgeText: {
+    color: '#FFF',
+    fontSize: 10,
+    fontWeight: '700',
+  },
 });
